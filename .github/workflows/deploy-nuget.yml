@@ -11,7 +11,9 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
       - name: Setup .NET
         uses: actions/setup-dotnet@v1
         with:
@@ -23,11 +25,13 @@ jobs:
       - name: Pack
         run: |
           BRANCH="${GITHUB_REF##*/}"
-          COMMINT_SHORT_SHA=`git rev-parse --short ${GITHUB_SHA}`
+          COMMIT_SHORT_SHA=`git rev-parse --short ${GITHUB_SHA}`
+          COMMIT_COUNT=`git rev-list --count HEAD`
+          COMMIT_TIME=`git show -s --format=%ct HEAD`
           if [ "$BRANCH" = "main" ]; then
             dotnet pack --no-dependencies -c Release
           else
-            dotnet pack --no-dependencies -c Debug --version-suffix ${BRANCH}-${COMMINT_SHORT_SHA}
+            dotnet pack --no-dependencies -c Debug --version-suffix ${BRANCH}.${COMMIT_TIME}+${COMMIT_SHORT_SHA}
           fi
       - name: Find Package
         run: |
