@@ -5,7 +5,7 @@
     <LangVersion>latest</LangVersion>
     <VersionMajor>1</VersionMajor>
     <VersionMinor>0</VersionMinor>
-    <VersionPatch>0</VersionPatch>
+    <VersionPatch>1</VersionPatch>
     <VersionPrefix>$(VersionMajor).$(VersionMinor).$(VersionPatch)</VersionPrefix>
     <VersionSuffix>$(VersionSuffix)</VersionSuffix>
     <FileVersion>$(VersionMajor).$([System.DateTime]::UtcNow.ToString(yy)).$([System.DateTime]::UtcNow.ToString(MMdd)).$([System.DateTime]::UtcNow.ToString(HHmm))</FileVersion>
@@ -15,10 +15,10 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <TargetsForTfmSpecificBuildOutput>$(TargetsForTfmSpecificBuildOutput);IncludeProjectReferences</TargetsForTfmSpecificBuildOutput>
-    <Authors>Aren Chen</Authors>
+    <Authors>NETCOREXT</Authors>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <PackageProjectUrl>https://github.com/arenchen/Netcorext.Diagnostics.HealthChecks.AspNetCore</PackageProjectUrl>
-    <RepositoryUrl>https://github.com/arenchen/Netcorext.Diagnostics.HealthChecks.AspNetCore.git</RepositoryUrl>
+    <PackageProjectUrl>https://github.com/NETCOREXT/Netcorext.Diagnostics.HealthChecks.AspNetCore</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/NETCOREXT/Netcorext.Diagnostics.HealthChecks.AspNetCore.git</RepositoryUrl>
     <Description>Normalized health check result</Description>
   </PropertyGroup>
 

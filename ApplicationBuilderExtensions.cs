@@ -1,12 +1,24 @@
 ﻿using System.Text.Json;
+using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 
 namespace Microsoft.Extensions.DependencyInjection;
 
 public static class ApplicationBuilderExtensions
 {
-    public const string DEFAULT_ENDPOINT = "/Health";
+    private const string DEFAULT_ENDPOINT = "/Health";
 
+    private static readonly JsonSerializerOptions JsonOptions = new()
+                                                                {
+                                                                    PropertyNameCaseInsensitive = true,
+                                                                    DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+                                                                    WriteIndented = false,
+                                                                    AllowTrailingCommas = true,
+                                                                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                                                                    DictionaryKeyPolicy = JsonNamingPolicy.CamelCase,
+                                                                    ReferenceHandler = ReferenceHandler.IgnoreCycles
+                                                                };
+    
     public static IApplicationBuilder UseSimpleHealthChecks(this IApplicationBuilder app, Func<IServiceProvider, string?> configure)
     {
         var path = configure?.Invoke(app.ApplicationServices);
@@ -34,14 +46,7 @@ public static class ApplicationBuilderExtensions
 
                                                                   using var stream = new MemoryStream();
 
-                                                                  await JsonSerializer.SerializeAsync(stream, items, new JsonSerializerOptions
-                                                                                                                     {
-                                                                                                                         IgnoreNullValues = true,
-                                                                                                                         WriteIndented = false,
-                                                                                                                         AllowTrailingCommas = true,
-                                                                                                                         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                                                                                                                         DictionaryKeyPolicy = JsonNamingPolicy.CamelCase
-                                                                                                                     });
+                                                                  await JsonSerializer.SerializeAsync(stream, items, JsonOptions);
 
                                                                   stream.Seek(0, SeekOrigin.Begin);
 
