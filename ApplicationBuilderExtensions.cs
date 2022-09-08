@@ -18,7 +18,7 @@ public static class ApplicationBuilderExtensions
                                                                     DictionaryKeyPolicy = JsonNamingPolicy.CamelCase,
                                                                     ReferenceHandler = ReferenceHandler.IgnoreCycles
                                                                 };
-    
+
     public static IApplicationBuilder UseSimpleHealthChecks(this IApplicationBuilder app, Func<IServiceProvider, string?> configure)
     {
         var path = configure?.Invoke(app.ApplicationServices);
@@ -30,32 +30,42 @@ public static class ApplicationBuilderExtensions
 
     public static IApplicationBuilder UseSimpleHealthChecks(this IApplicationBuilder app, string? path = DEFAULT_ENDPOINT)
     {
-        return app.UseHealthChecks(path, new HealthCheckOptions
-                                         {
-                                             ResponseWriter = async (context, report) =>
-                                                              {
-                                                                  var items = report.Entries.ToDictionary(pair => pair.Key,
-                                                                                                          pair => new
-                                                                                                                  {
-                                                                                                                      Status = pair.Value.Status.ToString(),
-                                                                                                                      Description = string.IsNullOrWhiteSpace(pair.Value.Description) ? null : pair.Value.Description,
-                                                                                                                      Duration = pair.Value.Duration.ToString(),
-                                                                                                                      Data = pair.Value.Data == null || !pair.Value.Data.Any() ? null : pair.Value.Data,
-                                                                                                                      Exception = pair.Value.Exception?.ToString()
-                                                                                                                  });
+        var endpoints = (IEndpointRouteBuilder)app;
 
-                                                                  using var stream = new MemoryStream();
+        var options = new HealthCheckOptions
+                      {
+                          ResponseWriter = async (context, report) =>
+                                           {
+                                               var items = report.Entries.ToDictionary(pair => pair.Key,
+                                                                                       pair => new
+                                                                                               {
+                                                                                                   Status = pair.Value.Status.ToString(),
+                                                                                                   Description = string.IsNullOrWhiteSpace(pair.Value.Description) ? null : pair.Value.Description,
+                                                                                                   Duration = pair.Value.Duration.ToString(),
+                                                                                                   Data = pair.Value.Data == null || !pair.Value.Data.Any() ? null : pair.Value.Data,
+                                                                                                   Exception = pair.Value.Exception?.ToString()
+                                                                                               });
 
-                                                                  await JsonSerializer.SerializeAsync(stream, items, JsonOptions);
+                                               using var stream = new MemoryStream();
 
-                                                                  stream.Seek(0, SeekOrigin.Begin);
+                                               await JsonSerializer.SerializeAsync(stream, items, JsonOptions);
 
-                                                                  var body = await new StreamReader(stream).ReadToEndAsync();
+                                               stream.Seek(0, SeekOrigin.Begin);
 
-                                                                  context.Response.ContentType = "application/json";
+                                               var body = await new StreamReader(stream).ReadToEndAsync();
 
-                                                                  await context.Response.WriteAsync(body);
-                                                              }
-                                         });
+                                               context.Response.ContentType = "application/json";
+
+                                               await context.Response.WriteAsync(body);
+                                           }
+                      };
+
+        var pipeline = endpoints.CreateApplicationBuilder()
+                                .UseMiddleware<HealthCheckMiddleware>(Options.Options.Create(options))
+                                .Build();
+
+        endpoints.MapGet(path, pipeline);
+
+        return app;
     }
 }
