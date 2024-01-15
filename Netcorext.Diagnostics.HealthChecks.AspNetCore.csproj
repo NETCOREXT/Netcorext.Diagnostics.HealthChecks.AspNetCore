@@ -5,10 +5,11 @@
     <LangVersion>latest</LangVersion>
     <VersionMajor>1</VersionMajor>
     <VersionMinor>0</VersionMinor>
-    <VersionPatch>2</VersionPatch>
+    <VersionPatch>3</VersionPatch>
     <VersionPrefix>$(VersionMajor).$(VersionMinor).$(VersionPatch)</VersionPrefix>
     <VersionSuffix>$(VersionSuffix)</VersionSuffix>
     <FileVersion>$(VersionMajor).$([System.DateTime]::UtcNow.ToString(yy)).$([System.DateTime]::UtcNow.ToString(MMdd)).$([System.DateTime]::UtcNow.ToString(HHmm))</FileVersion>
+    <OutputType>Library</OutputType>
     <IsPackable>true</IsPackable>
     <IncludeSymbols>true</IncludeSymbols>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>

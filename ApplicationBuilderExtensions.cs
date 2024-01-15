@@ -19,7 +19,8 @@ public static class ApplicationBuilderExtensions
                                                                     ReferenceHandler = ReferenceHandler.IgnoreCycles
                                                                 };
 
-    public static IApplicationBuilder UseSimpleHealthChecks(this IApplicationBuilder app, Func<IServiceProvider, string?> configure)
+    [Obsolete("Use UseDefaultHealthChecks instead.")]
+    public static IApplicationBuilder UseSimpleHealthChecks(this IApplicationBuilder app, Func<IServiceProvider, string>? configure)
     {
         var path = configure?.Invoke(app.ApplicationServices);
 
@@ -28,7 +29,19 @@ public static class ApplicationBuilderExtensions
         return UseSimpleHealthChecks(app, path);
     }
 
-    public static IApplicationBuilder UseSimpleHealthChecks(this IApplicationBuilder app, string? path = DEFAULT_ENDPOINT)
+    [Obsolete("Use UseDefaultHealthChecks instead.")]
+    public static IApplicationBuilder UseSimpleHealthChecks(this IApplicationBuilder app, string path = DEFAULT_ENDPOINT) => UseDefaultHealthChecks(app, path);
+
+    public static IApplicationBuilder UseDefaultHealthChecks(this IApplicationBuilder app, Func<IServiceProvider, string>? configure)
+    {
+        var path = configure?.Invoke(app.ApplicationServices);
+
+        if (string.IsNullOrWhiteSpace(path)) path = DEFAULT_ENDPOINT;
+
+        return UseDefaultHealthChecks(app, path);
+    }
+
+    public static IApplicationBuilder UseDefaultHealthChecks(this IApplicationBuilder app, string path = DEFAULT_ENDPOINT)
     {
         var endpoints = (IEndpointRouteBuilder)app;
 
@@ -36,13 +49,24 @@ public static class ApplicationBuilderExtensions
                       {
                           ResponseWriter = async (context, report) =>
                                            {
+                                               if (!context.Request.Query.TryGetValue("detail", out _))
+                                               {
+                                                    var status = report.Status.ToString();
+
+                                                    context.Response.ContentType = "text/plain";
+
+                                                    await context.Response.WriteAsync(status);
+
+                                                    return;
+                                               }
+
                                                var items = report.Entries.ToDictionary(pair => pair.Key,
                                                                                        pair => new
                                                                                                {
                                                                                                    Status = pair.Value.Status.ToString(),
                                                                                                    Description = string.IsNullOrWhiteSpace(pair.Value.Description) ? null : pair.Value.Description,
                                                                                                    Duration = pair.Value.Duration.ToString(),
-                                                                                                   Data = pair.Value.Data == null || !pair.Value.Data.Any() ? null : pair.Value.Data,
+                                                                                                   Data = !pair.Value.Data.Any() ? null : pair.Value.Data,
                                                                                                    Exception = pair.Value.Exception?.ToString()
                                                                                                });
 
