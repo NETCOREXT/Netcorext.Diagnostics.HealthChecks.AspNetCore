@@ -6,7 +6,7 @@ namespace Microsoft.Extensions.DependencyInjection;
 
 public static class ApplicationBuilderExtensions
 {
-    private const string DEFAULT_ENDPOINT = "/Health";
+    private const string DEFAULT_ENDPOINT = "/healthz";
 
     private static readonly JsonSerializerOptions JsonOptions = new()
                                                                 {
@@ -41,10 +41,18 @@ public static class ApplicationBuilderExtensions
         return UseDefaultHealthChecks(app, path);
     }
 
-    public static IApplicationBuilder UseDefaultHealthChecks(this IApplicationBuilder app, string path = DEFAULT_ENDPOINT)
+    public static IApplicationBuilder UseDefaultHealthChecks(this IApplicationBuilder app, Func<IServiceProvider, string[]>? configure)
     {
-        var endpoints = (IEndpointRouteBuilder)app;
+        var paths = configure?.Invoke(app.ApplicationServices);
 
+        if (paths == null || paths.Length == 0)
+            paths = new [] {DEFAULT_ENDPOINT};
+
+        return UseDefaultHealthChecks(app, paths);
+    }
+
+    public static IApplicationBuilder UseDefaultHealthChecks(this IApplicationBuilder app, params string[] paths)
+    {
         var options = new HealthCheckOptions
                       {
                           ResponseWriter = async (context, report) =>
@@ -84,11 +92,10 @@ public static class ApplicationBuilderExtensions
                                            }
                       };
 
-        var pipeline = endpoints.CreateApplicationBuilder()
-                                .UseMiddleware<HealthCheckMiddleware>(Options.Options.Create(options))
-                                .Build();
+        if (paths.Length == 0)
+            paths = new [] { DEFAULT_ENDPOINT };
 
-        endpoints.MapGet(path, pipeline);
+        app.UseWhen(context => paths.Any(path => context.Request.Path.StartsWithSegments(path, StringComparison.CurrentCultureIgnoreCase)), cfg => cfg.UseMiddleware<HealthCheckMiddleware>(Options.Options.Create(options)));
 
         return app;
     }
