@@ -36,23 +36,26 @@ public static class ApplicationBuilderExtensions
     {
         var path = configure?.Invoke(app.ApplicationServices);
 
-        if (string.IsNullOrWhiteSpace(path)) path = DEFAULT_ENDPOINT;
+        if (string.IsNullOrWhiteSpace(path))
+            path = DEFAULT_ENDPOINT;
 
-        return UseDefaultHealthChecks(app, path);
+        return UseDefaultHealthChecks(app, path, DEFAULT_ENDPOINT);
     }
 
-    public static IApplicationBuilder UseDefaultHealthChecks(this IApplicationBuilder app, Func<IServiceProvider, string[]>? configure)
+    public static IApplicationBuilder UseDefaultHealthChecks(this IApplicationBuilder app, Func<IServiceProvider, (string GatewayEndpoint, string LocalEndpoint)>? configure)
     {
         var paths = configure?.Invoke(app.ApplicationServices);
 
-        if (paths == null || paths.Length == 0)
-            paths = new [] {DEFAULT_ENDPOINT};
+        if (paths == null)
+            paths = (DEFAULT_ENDPOINT, DEFAULT_ENDPOINT);
 
-        return UseDefaultHealthChecks(app, paths);
+        return UseDefaultHealthChecks(app, paths.Value.GatewayEndpoint, paths.Value.LocalEndpoint);
     }
 
-    public static IApplicationBuilder UseDefaultHealthChecks(this IApplicationBuilder app, params string[] paths)
+
+    public static IApplicationBuilder UseDefaultHealthChecks(this IApplicationBuilder app, string gatewayEndpoint, string localEndpoint = DEFAULT_ENDPOINT)
     {
+        var endpoint = (IEndpointRouteBuilder)app;
         var options = new HealthCheckOptions
                       {
                           ResponseWriter = async (context, report) =>
@@ -92,10 +95,14 @@ public static class ApplicationBuilderExtensions
                                            }
                       };
 
-        if (paths.Length == 0)
-            paths = new [] { DEFAULT_ENDPOINT };
 
-        app.UseWhen(context => paths.Any(path => context.Request.Path.StartsWithSegments(path, StringComparison.CurrentCultureIgnoreCase)), cfg => cfg.UseMiddleware<HealthCheckMiddleware>(Options.Options.Create(options)));
+        var pipeline = endpoint.CreateApplicationBuilder()
+                                .UseMiddleware<HealthCheckMiddleware>(Options.Options.Create(options))
+                                .Build();
+
+        endpoint.MapGet(gatewayEndpoint, pipeline);
+
+        app.UseWhen(context => context.Request.Path.StartsWithSegments(localEndpoint, StringComparison.CurrentCultureIgnoreCase), cfg => cfg.UseMiddleware<HealthCheckMiddleware>(Options.Options.Create(options)));
 
         return app;
     }
